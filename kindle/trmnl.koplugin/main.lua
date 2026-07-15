@@ -485,6 +485,15 @@ function TrmnlDisplay:displayImage(image_path)
     - "partial": Fastest but may cause ghosting
     ]]
     local refresh_type = self.settings.refresh_type or "ui"
+    -- Hybrid flash: with "full" configured, only every 10th update (and the
+    -- first after launch) gets the flashing refresh that clears ghosting;
+    -- the rest use the non-flashing "ui" mode so updates are quiet.
+    if refresh_type == "full" then
+        self.refresh_count = (self.refresh_count or 0) + 1
+        if (self.refresh_count - 1) % 10 ~= 0 then
+            refresh_type = "ui"
+        end
+    end
     logger.info("TRMNL: Applying refresh type:", refresh_type)
 
     -- UIManager:setDirty() marks widget for screen update with specified refresh mode

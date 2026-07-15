@@ -32,7 +32,9 @@ SG_MED = str(FONTS / "SpaceGrotesk-Medium.ttf")
 SG_BOLD = str(FONTS / "SpaceGrotesk-Bold.ttf")
 PORT = 8790
 REFRESH_SECONDS = 60
-DISPLAY_REFRESH_SECONDS = 30
+DISPLAY_REFRESH_SECONDS = 60  # matches render cadence; frames only change once a minute
+KINDLE_STALE_SECONDS = 240
+KINDLE_REALERT_SECONDS = 1800
 ACCESS_TOKEN = os.environ.get("DASHBOARD_ACCESS_TOKEN", "change-me")
 CLAUDE_WEB_FRESH_SECONDS = 600
 CLAUDE_FALLBACK_SECONDS = 300
@@ -597,6 +599,38 @@ def refresh_state() -> None:
         render_dashboard(state)
 
 
+def notify_mac(title: str, message: str) -> None:
+    try:
+        subprocess.run(
+            ["osascript", "-e", f'display notification "{message}" with title "{title}"'],
+            capture_output=True, timeout=10,
+        )
+    except Exception as exc:
+        print(f"notification failed: {exc}", flush=True)
+
+
+_kindle_down_since: float | None = None
+_kindle_last_alert = 0.0
+
+
+def kindle_watchdog() -> None:
+    global _kindle_down_since, _kindle_last_alert
+    with state_lock:
+        last_seen = load_state().get("kindle_last_seen")
+    if not last_seen:
+        return
+    age = time.time() - datetime.fromisoformat(str(last_seen)).timestamp()
+    if age > KINDLE_STALE_SECONDS:
+        now = time.monotonic()
+        if _kindle_down_since is None or now - _kindle_last_alert > KINDLE_REALERT_SECONDS:
+            notify_mac("Kindle Ledger", f"Kindle hasn't checked in for {int(age // 60)} min")
+            _kindle_down_since = _kindle_down_since or now
+            _kindle_last_alert = now
+    elif _kindle_down_since is not None:
+        notify_mac("Kindle Ledger", "Kindle is checking in again")
+        _kindle_down_since = None
+
+
 def refresh_loop() -> None:
     while True:
         started = time.monotonic()
@@ -604,6 +638,10 @@ def refresh_loop() -> None:
             refresh_state()
         except Exception as exc:
             print(f"refresh failed: {exc}", flush=True)
+        try:
+            kindle_watchdog()
+        except Exception as exc:
+            print(f"watchdog failed: {exc}", flush=True)
         time.sleep(max(1, REFRESH_SECONDS - (time.monotonic() - started)))
 
 
