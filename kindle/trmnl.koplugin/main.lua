@@ -941,6 +941,9 @@ function TrmnlDisplay:stopAutoRefresh()
 
     logger.info("TRMNL: Stopping auto-refresh")
 
+    -- Deliberate stop: tell the server so its watchdog stays quiet
+    self:notifyServerOffline("stop")
+
     -- NOTE: Unschedule first to ensure clean state
     self:unscheduleRefreshTask()
 
@@ -969,12 +972,35 @@ end
 --============================================================================--
 
 --[[--
+Best-effort notice to the server that the device is going offline on
+purpose (sleep, dashboard exit, or KOReader shutdown), so the server's
+freeze watchdog knows not to alert. Short timeout, errors ignored —
+must never block or break the lifecycle path that calls it.
+]]
+function TrmnlDisplay:notifyServerOffline(reason)
+    if not self.settings.api_key or self.settings.api_key == "" then
+        return
+    end
+    logger.info("TRMNL: Announcing intentional offline:", reason)
+    local http = require("socket.http")
+    local previous_timeout = http.TIMEOUT
+    http.TIMEOUT = 2
+    pcall(http.request, {
+        url = self.settings.base_url .. "/api/kindle/offline?reason=" .. reason,
+        method = "GET",
+        headers = { ["access-token"] = self.settings.api_key },
+    })
+    http.TIMEOUT = previous_timeout
+end
+
+--[[--
 Device is suspending (going to sleep).
 
 Unschedule refresh task to prevent it running during sleep.
 ]]
 function TrmnlDisplay:onSuspend()
     if self.auto_refresh_enabled then
+        self:notifyServerOffline("suspend")
         self:unscheduleRefreshTask()
     end
 end
@@ -1017,6 +1043,9 @@ Clean up:
 ]]
 function TrmnlDisplay:onCloseWidget()
     logger.dbg("TRMNL: Plugin closing")
+    if self.auto_refresh_enabled then
+        self:notifyServerOffline("close")
+    end
     self:unscheduleRefreshTask()
     self.auto_refresh_scheduled = false
     self:allowAutoSuspend()

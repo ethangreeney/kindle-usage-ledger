@@ -616,7 +616,13 @@ _kindle_last_alert = 0.0
 def kindle_watchdog() -> None:
     global _kindle_down_since, _kindle_last_alert
     with state_lock:
-        last_seen = load_state().get("kindle_last_seen")
+        state = load_state()
+    if state.get("kindle_expected_offline"):
+        # The Kindle said goodbye (sleep or dashboard exit) — stay silent
+        # until it checks in again, which clears the flag.
+        _kindle_down_since = None
+        return
+    last_seen = state.get("kindle_last_seen")
     if not last_seen:
         return
     age = time.time() - datetime.fromisoformat(str(last_seen)).timestamp()
@@ -660,6 +666,7 @@ def record_kindle_status(value: str | None, ip_address: str) -> None:
             state["kindle_battery"] = percent
         state["kindle_ip"] = ip_address
         state["kindle_last_seen"] = datetime.now().astimezone().isoformat(timespec="seconds")
+        state.pop("kindle_expected_offline", None)
         state["render_version"] = RENDER_VERSION
         STATE_PATH.write_text(json.dumps(state, indent=2) + "\n")
         if battery_changed and state.get("claude") and state.get("codex"):
@@ -776,6 +783,17 @@ class Handler(BaseHTTPRequestHandler):
                 "refresh_rate": DISPLAY_REFRESH_SECONDS,
             }
             self.send_bytes(json.dumps(payload).encode() + b"\n", "application/json")
+            return
+        if path == "/api/kindle/offline":
+            if self.headers.get("access-token") != ACCESS_TOKEN:
+                self.send_bytes(b'{"error":"unauthorized"}\n', "application/json", 401)
+                return
+            with state_lock:
+                state = load_state()
+                state["kindle_expected_offline"] = datetime.now().astimezone().isoformat(timespec="seconds")
+                STATE_PATH.write_text(json.dumps(state, indent=2) + "\n")
+            print(f"kindle announced intentional offline ({self.path})", flush=True)
+            self.send_bytes(b'{"ok": true}\n', "application/json")
             return
         if path == "/screen.png" and IMAGE_PATH.exists():
             self.send_bytes(IMAGE_PATH.read_bytes(), "image/png")
