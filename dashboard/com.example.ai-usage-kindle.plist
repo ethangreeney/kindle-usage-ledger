@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.example.ai-usage-kindle</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/env</string>
+    <string>python3</string>
+    <string>/Users/YOU/kindle-usage-ledger/dashboard/usage_dashboard.py</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>DASHBOARD_ACCESS_TOKEN</key>
+    <string>change-me</string>
+  </dict>
+  <key>WorkingDirectory</key>
+  <string>/Users/YOU/kindle-usage-ledger/dashboard</string>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>ProcessType</key>
+  <string>Background</string>
+  <key>StandardOutPath</key>
+  <string>/Users/YOU/kindle-usage-ledger/dashboard/service.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/YOU/kindle-usage-ledger/dashboard/service-error.log</string>
+</dict>
+</plist>

@@ -1,0 +1,16 @@
+# runtime state and output
+dashboard/state.json
+dashboard/screen.png
+dashboard/*.log
+
+# fonts are fetched by dashboard/fonts/fetch_fonts.sh
+dashboard/fonts/*.ttf
+
+# never commit device credentials
+*_ed25519
+*_ed25519.pub
+*known_hosts*
+apikey.txt
+
+__pycache__/
+.DS_Store

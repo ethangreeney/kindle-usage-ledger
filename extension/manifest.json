@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "Claude Usage Bridge",
+  "description": "Keeps the local Kindle dashboard synchronized with Claude's live account usage.",
+  "version": "1.0.0",
+  "permissions": [
+    "alarms",
+    "scripting",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://claude.ai/*",
+    "http://127.0.0.1:8790/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Claude Usage Bridge"
+  }
+}
