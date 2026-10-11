@@ -5,7 +5,7 @@ Claude and Codex usage limits — typeset like a broadsheet, updated every minut
 small Python server on my Mac.
 
 <p align="center">
-  <img src="docs/kindle-photo.jpg" alt="The dashboard running on a Kindle Paperwhite" width="560">
+  <img src="docs/kindle-photo.jpg" alt="The dashboard running on a Kindle Paperwhite" width="420">
 </p>
 
 ## Why
